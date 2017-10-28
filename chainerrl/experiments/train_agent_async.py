@@ -54,20 +54,20 @@ def train_loop(process_idx, env, agent, steps, outdir, counter,
                         'outdir:%s global_step:%s local_step:%s R:%s',
                         outdir, global_t, local_t, episode_r)
                     logger.info('statistics:%s', agent.get_statistics())
-                if evaluator is not None:
-                    eval_score = evaluator.evaluate_if_necessary(
-                        t=global_t, episodes=global_episodes,
-                        env=eval_env, agent=agent)
-                    if (eval_score is not None and
-                            successful_score is not None and
-                            eval_score >= successful_score):
-                        with training_done.get_lock():
-                            if not training_done.value:
-                                training_done.value = True
-                                successful = True
-                        # Break immediately in order to avoid an additional
-                        # call of agent.act_and_train
-                        break
+                    if evaluator is not None:
+                        eval_score = evaluator.evaluate_if_necessary(
+                            t=global_t, episodes=global_episodes,
+                            env=eval_env, agent=agent)
+                        if (eval_score is not None and
+                                successful_score is not None and
+                                eval_score >= successful_score):
+                            with training_done.get_lock():
+                                if not training_done.value:
+                                    training_done.value = True
+                                    successful = True
+                            # Break immediately in order to avoid an additional
+                            # call of agent.act_and_train
+                            break
                 episode_r = 0
                 obs = env.reset()
                 r = 0
@@ -99,16 +99,18 @@ def train_loop(process_idx, env, agent, steps, outdir, counter,
         raise
 
     if global_t == steps + 1:
-        # Save the final model
-        dirname = os.path.join(outdir, '{}_finish'.format(steps))
-        agent.save(dirname)
-        logger.info('Saved the final agent to %s', dirname)
+        if process_idx == 0:
+            # Save the final model
+            dirname = os.path.join(outdir, '{}_finish'.format(steps))
+            agent.save(dirname)
+            logger.info('Saved the final agent to %s', dirname)
 
     if successful:
-        # Save the successful model
-        dirname = os.path.join(outdir, 'successful')
-        agent.save(dirname)
-        logger.info('Saved the successful agent to %s', dirname)
+        if process_idx == 0:
+            # Save the successful model
+            dirname = os.path.join(outdir, 'successful')
+            agent.save(dirname)
+            logger.info('Saved the successful agent to %s', dirname)
 
 
 def extract_shared_objects_from_agent(agent):
